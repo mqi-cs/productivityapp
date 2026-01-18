@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zen-Obsidian Command Center for deep focus.">
+    <title>Command Center | Zen Dashboard</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- HOME HUB (Landing Page) -->
+    <section id="home-hub" class="home-hub-container">
+        <div class="starfield-bg"></div>
+
+        <div class="hub-header">
+            <div class="global-mastery">
+                <span class="mastery-label">Global Mastery</span>
+                <span class="mastery-count" id="globalMasteryCount">0h</span>
+            </div>
+        </div>
+
+        <div class="portals-container">
+            <!-- Portal 1: Daily Ritual -->
+            <div class="hub-portal" data-target="daily">
+                <div class="portal-shape circle-shape">
+                    <div class="portal-glow"></div>
+                </div>
+                <div class="portal-label">The Daily Ritual</div>
+            </div>
+
+            <!-- Portal 2: Project Library -->
+            <div class="hub-portal" data-target="library">
+                <div class="portal-shape square-shape">
+                    <div class="portal-glow"></div>
+                </div>
+                <div class="portal-label">The Project Library</div>
+            </div>
+
+            <!-- Portal 3: Macro Map -->
+            <div class="hub-portal" data-target="macro">
+                <div class="portal-shape hex-shape">
+                    <div class="portal-glow"></div>
+                </div>
+                <div class="portal-label">The Macro Map</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WORKSPACE (Hidden by default) -->
+    <div id="app-workspace" class="workspace-wrapper" style="display: none; opacity: 0;">
+        <div class="app-container architecture-layout">
+            <!-- Background Elements -->
+            <div class="ambient-glow glow-1"></div>
+            <div class="ambient-glow glow-2"></div>
+
+            <!-- LEFT SIDEBAR: Geometric Navigation -->
+            <nav class="zen-sidebar">
+                <div class="nav-item active" data-target="daily" title="Daily Ritual">
+                    <div class="geo-icon circle-icon"></div>
+                </div>
+                <div class="nav-item" data-target="library" title="Task Library">
+                    <div class="geo-icon square-icon"></div>
+                </div>
+                <div class="nav-item" data-target="macro" title="Macro Map">
+                    <div class="geo-icon hexagon-icon"></div>
+                </div>
+                <!-- Back to Hub -->
+                <div class="nav-item bottom-action" id="backToHub" title="Return to Hub">
+                    <div class="geo-icon hub-icon">⌂</div>
+                </div>
+            </nav>
+
+            <!-- MAIN VIEWPORT -->
+            <main class="main-viewport">
+
+                <!-- Top Navigation Breadcrumb (Tactile Slider) -->
+                <header class="breadcrumb-container">
+                    <div class="tactile-slider">
+                        <div class="slider-track"></div>
+                        <div class="slider-thumb"></div>
+                        <div class="slider-labels">
+                            <span class="slide-label active" data-index="0">Daily</span>
+                            <span class="slide-label" data-index="1">Weekly</span>
+                            <span class="slide-label" data-index="2">Macro</span>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- VIEW 1: FOCUS MODULE (Daily Ritual) -->
+                <section id="view-daily" class="view-section active">
+                    <div class="daily-ritual-container">
+
+                        <!-- Center Stage: Canvas & Tray -->
+                        <div class="center-stage">
+                            <div class="focus-module glass-depth blank-canvas">
+                                <div class="focus-header">
+                                    <span class="date-display" id="currentDate">October 24</span>
+                                    <span class="focus-status">Daily Entry</span>
+                                </div>
+
+                                <!-- The Canvas -->
+                                <textarea class="focus-input" placeholder="What is your intention?"
+                                    spellcheck="false"></textarea>
+
+                                <!-- Progressive Disclosure Footer -->
+                                <div class="focus-footer">
+                                    <div class="time-logged">
+                                        <span class="icon">⏱</span>
+                                        <span>0h 00m</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Retractable Label Tray -->
+                            <div class="label-tray" id="labelTray">
+                                <button class="tray-handle" id="trayHandle">
+                                    <span class="tray-label">Label Tray</span>
+                                    <span class="tray-arrow">▲</span>
+                                </button>
+                                <div class="tray-content">
+                                    <span class="tray-section-title">Defaults</span>
+                                    <div class="tray-pills">
+                                        <button class="tray-pill">Create</button>
+                                        <button class="tray-pill">Review</button>
+                                        <button class="tray-pill">Plan</button>
+                                    </div>
+                                    <div class="tray-divider"></div>
+                                    <span class="tray-section-title">Recent</span>
+                                    <div class="tray-pills">
+                                        <button class="tray-pill color-pink">Design</button>
+                                        <button class="tray-pill color-blue">Email</button>
+                                        <button class="tray-pill color-mint">Reading</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Widget: Screen Time Mirror -->
+                        <div class="screen-time-widget">
+                            <div class="mirror-container glass-panel">
+                                <div class="mirror-header">Mirror</div>
+                                <div class="mirror-content">
+                                    <div class="mirror-col manual">
+                                        <div class="mirror-track">
+                                            <div class="mirror-fill fill-manual" style="height: 45%;"></div>
+                                            <span class="mirror-val">2.5h</span>
+                                        </div>
+                                        <span class="mirror-legend">Log</span>
+                                    </div>
+                                    <div class="mirror-mid-line"></div>
+                                    <div class="mirror-col digital">
+                                        <div class="mirror-track">
+                                            <div class="mirror-fill fill-digital warning" style="height: 70%;"></div>
+                                            <span class="mirror-val">4.2h</span>
+                                        </div>
+                                        <span class="mirror-legend">Screen</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Bottom Toggle: Zen Mode -->
+                    <div class="zen-mode-dock">
+                        <button class="zen-toggle" id="zenModeToggle">
+                            <div class="toggle-track">
+                                <div class="toggle-thumb"></div>
+                            </div>
+                            <span class="toggle-label">ZEN MODE</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- VIEW 2: TASK LIBRARY (Hidden by default, switched via Nav) -->
+                <section id="view-library" class="view-section" style="display: none;">
+                    <div class="bookshelf-container" id="bookshelf">
+                        <!-- Books injected via JS -->
+                    </div>
+                </section>
+
+            </main>
+
+            <!-- RIGHT DRAWER: Lens Filters -->
+            <aside class="lens-drawer" id="lensDrawer">
+                <button class="lens-toggle-btn" id="lensToggleBtn" title="Toggle Filters">
+                    <span class="lens-icon">◗</span>
+                </button> <!-- Handle visible outside -->
+
+                <div class="lens-content">
+                    <h3 class="lens-title">Priority Lens</h3>
+
+                    <div class="lens-controls">
+                        <div class="lens-group">
+                            <span class="lens-label urgency-label">Urgency</span>
+                            <label class="lens-switch">
+                                <input type="checkbox" id="viewToggle">
+                                <span class="lens-slider"></span>
+                            </label>
+                            <span class="lens-label importance-label">Importance</span>
+                        </div>
+
+                        <button class="zen-filter-btn" id="zenFilterBtn">
+                            <span class="zen-icon">◎</span> Zen Filter
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+
+        <!-- Hidden Overlay for Expanded Book View -->
+        <div class="journal-overlay">
+            <div class="journal-book-open">
+                <div class="journal-left">
+                    <h3>Checkout History</h3>
+                    <ul class="checkout-history-list" id="checkoutHistory">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="journal-right">
+                    <button class="close-journal">&times;</button>
+                    <h2 class="journal-title" id="journalTitle">Title</h2>
+                    <span class="journal-subtitle" id="journalSubtitle">Subtitle</span>
+
+                    <div class="journal-timeline" id="journalTimeline">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
