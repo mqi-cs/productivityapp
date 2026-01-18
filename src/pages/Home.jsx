@@ -25,27 +25,30 @@ export default function Home() {
                     </p>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-2xl text-left">
                     <PortalCard
-                        title="Daily Ritual"
+                        title="Flow"
+                        subtitle="Calendar & Tasks"
                         icon={Calendar}
                         className="hover:border-neon-cyan/50"
                         glowColor="rgba(168, 237, 234, 0.4)"
                         onClick={() => navigate('/dashboard')}
                     />
                     <PortalCard
-                        title="Project Library"
-                        icon={Book}
-                        className="hover:border-neon-pink/50"
-                        glowColor="rgba(255, 0, 212, 0.4)"
-                        onClick={() => navigate('/library')}
-                    />
-                    <PortalCard
                         title="Macro Map"
+                        subtitle="History & Analytics"
                         icon={Activity}
                         className="hover:border-neon-purple/50"
                         glowColor="rgba(189, 0, 255, 0.4)"
                         onClick={() => navigate('/macro')}
+                    />
+                    <PortalCard
+                        title="Projects"
+                        subtitle="Library & Tags"
+                        icon={Book}
+                        className="hover:border-neon-pink/50"
+                        glowColor="rgba(255, 0, 212, 0.4)"
+                        onClick={() => navigate('/library')}
                     />
                 </div>
 
@@ -54,7 +57,7 @@ export default function Home() {
     );
 }
 
-function PortalCard({ title, icon: Icon, onClick, className, glowColor }) {
+function PortalCard({ title, subtitle, icon: Icon, onClick, className, glowColor }) {
     return (
         <div
             onClick={onClick}
@@ -72,6 +75,7 @@ function PortalCard({ title, icon: Icon, onClick, className, glowColor }) {
                 <Icon className="w-8 h-8 text-white/80 group-hover:text-white" />
             </div>
             <h2 className="relative z-10 text-xl font-light text-white tracking-widest uppercase">{title}</h2>
+            <p className="relative z-10 text-xs text-muted-foreground uppercase tracking-widest">{subtitle}</p>
             <div className="relative z-10 mt-auto opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
                 <ArrowRight className="w-5 h-5 text-white/50" />
             </div>

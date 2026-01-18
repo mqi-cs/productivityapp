@@ -1,26 +1,31 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Shell from './components/layout/Shell';
 import Home from './pages/Home';
-
-import DailyView from './pages/DailyView';
+import CalendarView from './pages/CalendarView';
 import LibraryView from './pages/LibraryView';
-// Placeholders for now
 import MacroView from './pages/MacroView';
+import { DataProvider } from './context/DataContext';
 
-function App() {
+function AppContent() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Shell />}>
-          <Route index element={<Home />} />
-          <Route path="dashboard" element={<DailyView />} />
-          <Route path="library" element={<LibraryView />} />
-          <Route path="macro" element={<MacroView />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={<Shell />}>
+        <Route index element={<Home />} />
+        <Route path="dashboard" element={<CalendarView />} />
+        <Route path="library" element={<LibraryView />} />
+        <Route path="macro" element={<MacroView />} />
+      </Route>
+    </Routes>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <DataProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </DataProvider>
+  );
+}

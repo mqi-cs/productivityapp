@@ -1,92 +1,92 @@
 import React, { useState } from 'react';
-import { libraryData } from '@/lib/data';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
-import { CheckSquare, Clock } from 'lucide-react';
+import { useData } from '../context/DataContext';
+import { Button } from '@/components/ui/button';
+import { Plus, Tag, Trash2, FolderOpen } from 'lucide-react';
+// We reused the Dialog component
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 export default function LibraryView() {
-    const [selectedProject, setSelectedProject] = useState(null);
+    const { projects, addProject, tasks } = useData();
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [newProjectName, setNewProjectName] = useState('');
+    const [newProjectColor, setNewProjectColor] = useState('#3b82f6');
+
+    const handleCreate = () => {
+        if (newProjectName.trim()) {
+            addProject(newProjectName, newProjectColor);
+            setIsDialogOpen(false);
+            setNewProjectName('');
+        }
+    };
 
     return (
-        <div className="p-10 h-full overflow-y-auto">
-            <header className="mb-10">
-                <h1 className="text-4xl font-light text-white mb-2">Project Library</h1>
-                <p className="text-muted-foreground">Select a volume to open its journal.</p>
+        <div className="h-full w-full bg-[#0c0c0c] text-white p-8">
+            <header className="flex items-center justify-between mb-8 max-w-4xl mx-auto">
+                <div>
+                    <h1 className="text-3xl font-light mb-2">Project Library</h1>
+                    <p className="text-muted-foreground">Manage your areas of focus and tags.</p>
+                </div>
+                <Button onClick={() => setIsDialogOpen(true)} className="bg-neon-blue text-white hover:bg-neon-blue/80 gap-2">
+                    <Plus className="w-4 h-4" /> New Project
+                </Button>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {libraryData.map(book => (
-                    <div
-                        key={book.id}
-                        onClick={() => setSelectedProject(book)}
-                        className={cn(
-                            "group relative aspect-[3/4] rounded-r-xl rounded-l-sm bg-card border border-white/5 cursor-pointer transition-all hover:scale-105 hover:border-neon-purple/50",
-                            book.urgency === 'high' && book.importance === 'high' ? "shadow-[0_0_20px_rgba(255,0,212,0.1)]" : ""
-                        )}
-                    >
-                        {/* Spine Effect */}
-                        <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-white/10 to-transparent rounded-l-sm" />
-
-                        <div className="p-6 h-full flex flex-col">
-                            <span className="text-xs font-mono text-neon-cyan mb-auto block">{book.mastery}</span>
-
-                            <h3 className="text-2xl font-serif text-white/90 break-words group-hover:text-neon-purple transition-colors">
-                                {book.title}
-                            </h3>
-
-                            <div className="mt-4 h-1 w-10 bg-white/20 group-hover:bg-neon-blue transition-colors" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                {projects.map(project => {
+                    const taskCount = tasks.filter(t => t.projectId === project.id).length;
+                    return (
+                        <div key={project.id} className="p-6 rounded-xl border border-white/10 bg-[#111] hover:border-white/20 transition-all group">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${project.color}20` }}>
+                                    <FolderOpen className="w-5 h-5" style={{ color: project.color }} />
+                                </div>
+                                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500">
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <h3 className="text-lg font-medium mb-1">{project.name}</h3>
+                            <p className="text-sm text-muted-foreground">{taskCount} tasks active</p>
+                            <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-white/20" style={{ width: '40%', backgroundColor: project.color }} />
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
 
-            <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <DialogContent className="max-w-2xl bg-card/95 backdrop-blur-xl border-white/10 text-foreground">
-                    {selectedProject && (
-                        <>
-                            <DialogHeader>
-                                <DialogTitle className="text-3xl font-light">{selectedProject.title}</DialogTitle>
-                                <DialogDescription className="text-lg">{selectedProject.description}</DialogDescription>
-                            </DialogHeader>
-
-                            <div className="py-6 space-y-8">
-                                {/* Intentions */}
-                                <div>
-                                    <h4 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Active Intentions</h4>
-                                    <div className="space-y-2">
-                                        {selectedProject.intentions.length > 0 ? selectedProject.intentions.map((intent, i) => (
-                                            <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
-                                                <CheckSquare className={cn("w-5 h-5", intent.done ? "text-neon-green" : "text-muted-foreground")} />
-                                                <span className={cn(intent.done && "line-through text-muted-foreground")}>{intent.text}</span>
-                                            </div>
-                                        )) : <p className="text-muted-foreground italic">No active intentions.</p>}
-                                    </div>
-                                </div>
-
-                                {/* History / Journal */}
-                                <div>
-                                    <h4 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Recent Logs</h4>
-                                    <div className="space-y-4">
-                                        {selectedProject.journal.map((entry, i) => (
-                                            <div key={i} className="border-l-2 border-neon-blue/30 pl-4 py-1">
-                                                <div className="text-xs text-neon-cyan mb-1">{entry.date}</div>
-                                                <p className="text-sm text-foreground/80">{entry.text}</p>
-                                            </div>
-                                        ))}
-                                        {selectedProject.history.map((h, i) => (
-                                            <div key={`h-${i}`} className="flex justify-between text-sm text-muted-foreground border-b border-white/5 py-2">
-                                                <span>{h.date} Session</span>
-                                                <div className="flex items-center gap-1">
-                                                    <Clock className="w-3 h-3" />
-                                                    <span>{h.duration}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-[425px] bg-[#111] border-white/10 text-white">
+                    <DialogHeader>
+                        <DialogTitle>New Project</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-sm text-muted-foreground">Name</label>
+                            <input
+                                placeholder="e.g. Q4 Marketing"
+                                className="w-full bg-white/5 border border-white/10 rounded-md p-3 focus:outline-none focus:border-neon-blue transition-colors"
+                                value={newProjectName}
+                                onChange={(e) => setNewProjectName(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm text-muted-foreground">Color</label>
+                            <div className="flex gap-2">
+                                {['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899'].map(c => (
+                                    <button
+                                        key={c}
+                                        onClick={() => setNewProjectColor(c)}
+                                        className={`w-8 h-8 rounded-full border-2 transition-all ${newProjectColor === c ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`}
+                                        style={{ backgroundColor: c }}
+                                    />
+                                ))}
                             </div>
-                        </>
-                    )}
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleCreate} className="bg-neon-blue hover:bg-neon-blue/80 text-white">Create</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
