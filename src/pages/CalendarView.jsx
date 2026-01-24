@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { DndContext, DragOverlay, useDraggable, useDroppable, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
-import { ChevronLeft, ChevronRight, Inbox, Plus, Check, MoreHorizontal, X, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Inbox, Plus, Check, MoreHorizontal, X, Clock, AlertCircle, AlertTriangle, Info, Filter, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
@@ -17,7 +17,8 @@ export default function CalendarView() {
     const { inboxTasks, scheduleTask, unscheduleTask, addTask, projects, overdueTasks, dueTodayTasks } = useData();
     const [viewMode, setViewMode] = useState('week'); // 'day', '3day', 'week'
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [draggedTask, setDraggedTask] = useState(null);
+
+    const [draggedItem, setDraggedItem] = useState(null); // { type: 'task' | 'project', data: ... }
 
     // Selection / Creation State
     const [isSelecting, setIsSelecting] = useState(false);
@@ -25,7 +26,17 @@ export default function CalendarView() {
     const [showCreationDialog, setShowCreationDialog] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [selectedProjectId, setSelectedProjectId] = useState(null);
-    const [isRecurring, setIsRecurring] = useState(false); // New State
+
+    const [isRecurring, setIsRecurring] = useState(false);
+    const [newUrgency, setNewUrgency] = useState('medium');
+    const [newImportance, setNewImportance] = useState('medium');
+    const [newLabels, setNewLabels] = useState(''); // Comma sep string
+
+    // Filter State
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterUrgency, setFilterUrgency] = useState('all'); // 'high', 'medium', 'low', 'all'
+    const [filterImportance, setFilterImportance] = useState('all'); // 'high', 'medium', 'low', 'all'
+    const [filterLabels, setFilterLabels] = useState('');
 
     const sensors = useSensors(useSensor(PointerSensor, {
         activationConstraint: { distance: 8 }
@@ -130,16 +141,22 @@ export default function CalendarView() {
     const cancelCreation = () => {
         setShowCreationDialog(false);
         setNewTaskTitle('');
-        setSelection(null); // Fix: Clear highlight on cancel
+        setSelection(null);
         setIsRecurring(false);
+        setNewUrgency('medium');
+        setNewImportance('medium');
+        setNewLabels('');
     }
 
     const handleCreateTask = () => {
-        if (!newTaskTitle.trim() || !selection) return;
+        if (!newTaskTitle.trim()) return;
 
-        const duration = (selection.end - selection.start) / (1000 * 60);
         // Pass recurrence 'daily' if checked. Use selected project.
-        addTask(newTaskTitle, selectedProjectId, duration, selection.start, isRecurring ? 'daily' : null);
+        const duration = selection ? (selection.end - selection.start) / (1000 * 60) : 60; // Default 60 if no selection
+        const start = selection ? selection.start : null;
+
+        const labelsArray = newLabels.split(',').map(l => l.trim()).filter(Boolean);
+        addTask(newTaskTitle, selectedProjectId, duration, start, isRecurring ? 'daily' : null, newUrgency, newImportance, labelsArray);
 
         cancelCreation();
     };
@@ -178,23 +195,61 @@ export default function CalendarView() {
     }
 
 
+    // Filter Logic
+    const meetsFilters = (task) => {
+        if (filterUrgency !== 'all' && task.urgency !== filterUrgency) return false;
+        if (filterImportance !== 'all' && task.importance !== filterImportance) return false;
+        if (filterLabels.trim()) {
+            const search = filterLabels.toLowerCase();
+            if (!task.labels || !task.labels.some(l => l.toLowerCase().includes(search))) return false;
+        }
+        return true;
+    };
+
     // DnD Handlers
     const handleDragStart = (e) => {
-        setDraggedTask(e.active.data.current.task);
+        const { current } = e.active.data;
+        if (current?.type === 'task') {
+            setDraggedItem({ type: 'task', data: current.task });
+        } else if (current?.type === 'project') {
+            setDraggedItem({ type: 'project', data: current.project });
+        }
     };
 
     const handleDragEnd = (e) => {
         const { active, over } = e;
-        setDraggedTask(null);
+        setDraggedItem(null);
 
         if (!over) return;
 
-        if (over.id.startsWith('cell-')) {
-            const [cellId, hourStr] = over.id.split('_');
-            const dateStr = cellId.replace('cell-', '');
-            scheduleTask(active.id, dateStr, parseInt(hourStr));
-        } else if (over.id === 'inbox-droppable') {
-            unscheduleTask(active.id);
+        const isTask = active.data.current?.type === 'task';
+        const isProject = active.data.current?.type === 'project';
+
+        if (isTask) {
+            if (over.id.startsWith('cell-')) {
+                const [cellId, hourStr] = over.id.split('_');
+                const dateStr = cellId.replace('cell-', '');
+                scheduleTask(active.id, dateStr, parseInt(hourStr));
+            } else if (over.id === 'inbox-droppable') {
+                unscheduleTask(active.id);
+            }
+        } else if (isProject) {
+            if (over.id.startsWith('cell-')) {
+                const [cellId, hourStr] = over.id.split('_');
+                const dateStr = cellId.replace('cell-', '');
+                const hour = parseInt(hourStr);
+
+                // Set up creation dialog
+                const start = new Date(dateStr);
+                start.setHours(hour, 0, 0, 0);
+                const end = new Date(start);
+                end.setHours(hour + 1);
+
+                setSelection({ start, end });
+                setSelectedProjectId(active.id);
+                setNewTaskTitle(''); // Reset title
+                setShowCreationDialog(true);
+            }
         }
     };
 
@@ -231,17 +286,17 @@ export default function CalendarView() {
                             <span className="flex items-center gap-2"><Inbox className="w-4 h-4" /> Inbox</span>
                             <Button size="icon" variant="ghost" className="w-5 h-5 rounded-full hover:bg-white/10" onClick={() => {/* Add generic task logic later */ }}><Plus className="w-3 h-3" /></Button>
                         </div>
-                        <InboxList tasks={inboxTasks} id="inbox-droppable" />
+                        <InboxList tasks={inboxTasks} id="inbox-droppable" meetsFilters={meetsFilters} />
 
                         {/* Project Lists (Collapsible) */}
                         <div className="mt-6 px-4">
                             <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Projects</div>
                             {projects.map(p => (
-                                <div key={p.id} className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground hover:text-white cursor-pointer group">
-                                    <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                                    <span>{p.name}</span>
-                                    <MoreHorizontal className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100" />
-                                </div>
+                                <ProjectFolder key={p.id} project={p} inboxTasks={inboxTasks} meetsFilters={meetsFilters} onAddClick={(pid) => {
+                                    setSelectedProjectId(pid);
+                                    setShowCreationDialog(true);
+                                    setSelection(null); // No specific time = Backlog
+                                }} />
                             ))}
                         </div>
                     </div>
@@ -261,26 +316,69 @@ export default function CalendarView() {
                                 <button onClick={() => handleDateChange(1)} className="p-1 hover:bg-white/10 rounded"><ChevronRight className="w-4 h-4" /></button>
                             </div>
                         </div>
-                        <div className="flex bg-white/5 rounded-lg p-1 gap-1">
-                            {['day', '3day', 'week', 'month'].map(mode => (
-                                <button
-                                    key={mode}
-                                    onClick={() => setViewMode(mode)}
-                                    className={cn(
-                                        "text-xs uppercase tracking-wider px-3 py-1.5 rounded-md transition-all",
-                                        viewMode === mode ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/20" : "text-muted-foreground hover:text-white"
-                                    )}
-                                >
-                                    {mode}
-                                </button>
-                            ))}
+                        <div className="flex items-center gap-4">
+                            {/* Filter Toggle */}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={cn("text-muted-foreground hover:text-white gap-2", (filterUrgency !== 'all' || filterImportance !== 'all' || filterLabels) && "text-neon-blue")}
+                            >
+                                <Filter className="w-4 h-4" /> Filter
+                            </Button>
+
+                            <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+                                {['day', '3day', 'week', 'month'].map(mode => (
+                                    <button
+                                        key={mode}
+                                        onClick={() => setViewMode(mode)}
+                                        className={cn(
+                                            "text-xs uppercase tracking-wider px-3 py-1.5 rounded-md transition-all",
+                                            viewMode === mode ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/20" : "text-muted-foreground hover:text-white"
+                                        )}
+                                    >
+                                        {mode}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </header>
+
+                    {/* Filter Bar */}
+                    {showFilters && (
+                        <div className="h-10 border-b border-white/5 bg-[#111] px-6 flex items-center gap-4 animate-in slide-in-from-top-2">
+                            <div className="flex items-center gap-2 text-xs">
+                                <span className="text-muted-foreground">Urgency:</span>
+                                <select className="bg-white/5 border border-white/10 rounded px-2 py-1 focus:outline-none" value={filterUrgency} onChange={e => setFilterUrgency(e.target.value)}>
+                                    <option value="all">All</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                                <span className="text-muted-foreground">Importance:</span>
+                                <select className="bg-white/5 border border-white/10 rounded px-2 py-1 focus:outline-none" value={filterImportance} onChange={e => setFilterImportance(e.target.value)}>
+                                    <option value="all">All</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                            <input
+                                placeholder="Filter by label..."
+                                className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs focus:outline-none w-32"
+                                value={filterLabels}
+                                onChange={e => setFilterLabels(e.target.value)}
+                            />
+                            <Button variant="ghost" size="xs" onClick={() => { setFilterUrgency('all'); setFilterImportance('all'); setFilterLabels(''); }} className="text-xs ml-auto">Clear</Button>
+                        </div>
+                    )}
 
                     {/* Content Switcher */}
                     <div className="flex-1 overflow-y-auto relative scrollbar-hide select-none">
                         {viewMode === 'month' ? (
-                            <MonthGrid currentDate={currentDate} onTaskClick={openEditDialog} />
+                            <MonthGrid currentDate={currentDate} onTaskClick={openEditDialog} meetsFilters={meetsFilters} />
                         ) : (
                             <div className="flex min-w-full">
                                 {/* Time Axis */}
@@ -302,6 +400,7 @@ export default function CalendarView() {
                                         onMouseEnterSlot={handleMouseEnterSlot}
                                         selection={selection}
                                         onTaskClick={openEditDialog}
+                                        meetsFilters={meetsFilters}
                                     />
                                 ))}
                             </div>
@@ -310,7 +409,14 @@ export default function CalendarView() {
                 </div>
 
                 <DragOverlay>
-                    {draggedTask ? <TaskItem task={draggedTask} isOverlay /> : null}
+                    {draggedItem?.type === 'task' ? (
+                        <TaskItem task={draggedItem.data} isOverlay />
+                    ) : draggedItem?.type === 'project' ? (
+                        <div className="flex items-center gap-2 py-1.5 px-3 bg-[#1a1a1a] rounded border border-white/20 shadow-xl">
+                            <div className="w-2 h-2 rounded-full" style={{ background: draggedItem.data.color }} />
+                            <span className="text-sm font-medium text-white">{draggedItem.data.name}</span>
+                        </div>
+                    ) : null}
                 </DragOverlay>
 
                 {/* Creation Dialog */}
@@ -331,20 +437,28 @@ export default function CalendarView() {
                             <div className="flex items-center justify-between">
                                 <div className="flex gap-2 text-sm text-muted-foreground">
                                     <div className="bg-white/5 px-2 py-1 rounded">
-                                        {selection?.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        -
-                                        {selection?.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {selection ? (
+                                            <>
+                                                {selection.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                -
+                                                {selection.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </>
+                                        ) : (
+                                            <span className="text-zinc-500 italic">Adding to Backlog</span>
+                                        )}
                                     </div>
                                 </div>
-                                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-white">
-                                    <input
-                                        type="checkbox"
-                                        checked={isRecurring}
-                                        onChange={(e) => setIsRecurring(e.target.checked)}
-                                        className="rounded border-white/10 bg-white/5 text-neon-blue focus:ring-neon-blue/50"
-                                    />
-                                    Daily Ritual
-                                </label>
+                                {selection && (
+                                    <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-white">
+                                        <input
+                                            type="checkbox"
+                                            checked={isRecurring}
+                                            onChange={(e) => setIsRecurring(e.target.checked)}
+                                            className="rounded border-white/10 bg-white/5 text-neon-blue focus:ring-neon-blue/50"
+                                        />
+                                        Daily Ritual
+                                    </label>
+                                )}
                             </div>
 
                             {/* Project Selection */}
@@ -368,6 +482,30 @@ export default function CalendarView() {
                                         {p.name}
                                     </button>
                                 ))}
+                            </div>
+
+                            {/* Urgency & Importance & Labels */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground">Urgency</label>
+                                    <div className="flex bg-white/5 rounded p-1 gap-1">
+                                        {['low', 'medium', 'high'].map(v => (
+                                            <button key={v} onClick={() => setNewUrgency(v)} className={cn("flex-1 text-xs py-1 rounded capitalize", newUrgency === v ? "bg-neon-blue text-white" : "text-muted-foreground hover:bg-white/10")}>{v}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground">Importance</label>
+                                    <div className="flex bg-white/5 rounded p-1 gap-1">
+                                        {['low', 'medium', 'high'].map(v => (
+                                            <button key={v} onClick={() => setNewImportance(v)} className={cn("flex-1 text-xs py-1 rounded capitalize", newImportance === v ? "bg-neon-blue text-white" : "text-muted-foreground hover:bg-white/10")}>{v}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs text-muted-foreground">Labels (comma separated)</label>
+                                <input className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm focus:outline-none" placeholder="work, design, etc..." value={newLabels} onChange={e => setNewLabels(e.target.value)} />
                             </div>
                         </div>
                         <DialogFooter>
@@ -408,6 +546,14 @@ export default function CalendarView() {
                                 </Button>
                             </div>
 
+                            {/* Allow Editing Labels/Urgency in Edit Mode (Compact) */}
+                            {/* Simplification: Just showing details for now, full edit could be added here */}
+                            <div className="flex gap-4 text-xs text-muted-foreground mt-2">
+                                <div>Urgency: <span className="text-white capitalize">{editingTask?.urgency || 'medium'}</span></div>
+                                <div>Importance: <span className="text-white capitalize">{editingTask?.importance || 'medium'}</span></div>
+                                <div>Labels: <span className="text-white">{editingTask?.labels?.join(', ') || '-'}</span></div>
+                            </div>
+
                             <Button variant="ghost" onClick={() => setEditingTask(null)}>Cancel</Button>
                             <Button onClick={handleSaveEdit} className="bg-neon-blue hover:bg-neon-blue/80 text-white">Save</Button>
                         </DialogFooter>
@@ -420,7 +566,7 @@ export default function CalendarView() {
 
 // --- SUB COMPONENTS ---
 
-function MonthGrid({ currentDate, onTaskClick }) {
+function MonthGrid({ currentDate, onTaskClick, meetsFilters }) {
     const { getTasksByDate, projects } = useData();
     const [days, setDays] = useState([]);
 
@@ -456,7 +602,7 @@ function MonthGrid({ currentDate, onTaskClick }) {
                     if (!date) return <div key={idx} className="bg-[#0c0c0c] min-h-[100px]" />;
 
                     const dateStr = date.toISOString().split('T')[0];
-                    const tasks = getTasksByDate(dateStr);
+                    const tasks = getTasksByDate(dateStr).filter(meetsFilters);
                     const isToday = new Date().toDateString() === date.toDateString();
 
                     return (
@@ -487,12 +633,13 @@ function MonthGrid({ currentDate, onTaskClick }) {
     )
 }
 
-function InboxList({ tasks, id = 'inbox-droppable' }) {
+function InboxList({ tasks, id = 'inbox-droppable', meetsFilters }) {
     const { setNodeRef } = useDroppable({ id });
+    const filteredTasks = meetsFilters ? tasks.filter(meetsFilters) : tasks;
     return (
         <div ref={setNodeRef} className="flex-1 p-2 space-y-2 min-h-[100px]">
-            {tasks.map(task => <TaskItem key={task.id} task={task} />)}
-            {tasks.length === 0 && <div className="text-center text-xs text-zinc-800 py-4 italic">No tasks</div>}
+            {filteredTasks.map(task => <TaskItem key={task.id} task={task} />)}
+            {filteredTasks.length === 0 && <div className="text-center text-xs text-zinc-800 py-4 italic">No tasks</div>}
         </div>
     );
 }
@@ -500,7 +647,7 @@ function InboxList({ tasks, id = 'inbox-droppable' }) {
 function TaskItem({ task, isOverlay }) {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: task.id,
-        data: { task }
+        data: { type: 'task', task }
     });
     const { projects, toggleTaskStatus } = useData();
     const project = projects.find(p => p.id === task.projectId);
@@ -510,14 +657,21 @@ function TaskItem({ task, isOverlay }) {
         zIndex: 999
     } : undefined;
 
+    // Visuals based on Urgency/Importnace
+    const urgencyColor = task.urgency === 'high' ? 'text-red-500' : task.urgency === 'medium' ? 'text-amber-500' : 'text-zinc-500';
+    const importanceClass = task.importance === 'high' ? 'border-l-4 border-l-neon-blue' : task.importance === 'low' ? 'border-dashed' : '';
+
     return (
         <div
             ref={setNodeRef}
-            className={cn("bg-[#1a1a1a] p-3 rounded-lg border border-white/10 shadow-sm hover:border-white/20 group cursor-grab active:cursor-grabbing flex gap-3 text-left", isOverlay && "shadow-2xl rotate-2")}
+            className={cn("bg-[#1a1a1a] p-3 rounded-lg border border-white/10 shadow-sm hover:border-white/20 group cursor-grab active:cursor-grabbing flex gap-3 text-left relative", isOverlay && "shadow-2xl rotate-2", importanceClass)}
             style={style}
             {...listeners}
             {...attributes}
         >
+            {/* Urgency Icon */}
+            {task.urgency === 'high' && <AlertCircle className="absolute top-1 right-1 w-3 h-3 text-red-500" />}
+
             <button
                 onPointerDown={(e) => { e.stopPropagation(); toggleTaskStatus(task.id); }} // Stop propagation so dragging doesn't start
                 className={cn("mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all", task.status === 'done' ? "bg-neon-green border-neon-green text-black" : "border-white/20 hover:border-white/50")}
@@ -530,17 +684,18 @@ function TaskItem({ task, isOverlay }) {
                     <div className="w-1.5 h-1.5 rounded-full" style={{ background: project?.color }} />
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{project?.name}</span>
                 </div>
+                {task.labels?.length > 0 && <div className="flex gap-1 mt-1 flex-wrap">{task.labels.map(l => <span key={l} className="bg-white/10 text-[9px] px-1 rounded text-zinc-400">{l}</span>)}</div>}
             </div>
         </div>
     )
 }
 
-function DayColumn({ date, dayName, onMouseDown, onMouseEnterSlot, selection, onTaskClick }) {
+function DayColumn({ date, dayName, onMouseDown, onMouseEnterSlot, selection, onTaskClick, meetsFilters }) {
     const { getTasksByDate, projects, toggleTaskStatus } = useData();
     const dateStr = date.toISOString().split('T')[0];
     const isToday = new Date().toDateString() === date.toDateString();
 
-    const tasks = getTasksByDate(dateStr);
+    const tasks = getTasksByDate(dateStr).filter(meetsFilters);
 
     return (
         <div className="flex-1 min-w-[150px] border-r border-white/5 relative group">
@@ -573,6 +728,7 @@ function DayColumn({ date, dayName, onMouseDown, onMouseEnterSlot, selection, on
                     const height = (task.duration / 60) * CELL_HEIGHT;
                     const project = projects.find(p => p.id === task.projectId);
                     const isDone = task.status === 'done';
+                    const importanceStyle = task.importance === 'high' ? '3px solid #00f0ff' : task.importance === 'low' ? '1px dotted rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.05)';
 
                     if (startHour < HOURS[0]) return null;
 
@@ -589,12 +745,16 @@ function DayColumn({ date, dayName, onMouseDown, onMouseEnterSlot, selection, on
                                 height: `${height - 2}px`,
                                 backgroundColor: `${project?.color}15`,
                                 borderLeft: `3px solid ${project?.color}`,
-                                borderTop: '1px solid rgba(255,255,255,0.05)',
-                                borderRight: '1px solid rgba(255,255,255,0.05)',
-                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                borderTop: importanceStyle,
+                                borderRight: importanceStyle,
+                                borderBottom: importanceStyle,
                             }}
                         >
                             <div className="flex items-start gap-1.5">
+                                {/* Urgency Icon */}
+                                {task.urgency === 'high' && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />}
+                                {task.urgency === 'medium' && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500" />}
+
                                 {/* Checkbox Overlay on Hover/Interactive */}
                                 <div
                                     onClick={(e) => { e.stopPropagation(); toggleTaskStatus(task.id, dateStr); }}
@@ -654,5 +814,72 @@ function DroppableCell({ dateStr, hour, date, onMouseDown, onMouseEnter }) {
             )}
         >
         </div>
+
     )
 }
+
+
+function ProjectFolder({ project, inboxTasks, meetsFilters, onAddClick }) {
+    // Filter tasks for this project that are unscheduled (inboxTasks contains all unscheduled)
+    // Actually, inboxTasks from context is ALL unscheduled tasks.
+    const projectTasks = inboxTasks.filter(t => t.projectId === project.id && meetsFilters(t));
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="mb-2">
+            <div className="flex items-center gap-1 group">
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="p-1 text-muted-foreground hover:text-white transition-colors"
+                >
+                    {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
+                </button>
+
+                <DraggableProject project={project} />
+
+                <button
+                    onClick={() => onAddClick(project.id)}
+                    className="ml-auto w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:bg-white/10 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                >
+                    <Plus className="w-3 h-3" />
+                </button>
+            </div>
+
+            {isExpanded && (
+                <div className="ml-4 border-l border-white/5 pl-2 mt-1 space-y-1">
+                    {projectTasks.length > 0 ? (
+                        projectTasks.map(task => <TaskItem key={task.id} task={task} />)
+                    ) : (
+                        <div className="text-[10px] text-zinc-700 py-1 pl-2">No backlog tasks</div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function DraggableProject({ project }) {
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({
+        id: project.id,
+        data: { type: 'project', project }
+    });
+
+    const style = transform ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 999
+    } : undefined;
+
+    return (
+        <div
+            ref={setNodeRef}
+            {...listeners}
+            {...attributes}
+            style={style}
+            className="flex-1 flex items-center gap-2 py-1.5 text-sm text-muted-foreground hover:text-white cursor-grab active:cursor-grabbing select-none"
+        >
+            <div className="w-2 h-2 rounded-full" style={{ background: project.color }} />
+            <span>{project.name}</span>
+        </div>
+    )
+}
+

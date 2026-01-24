@@ -7,12 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import TaskCanvas from '@/components/ui/TaskCanvas';
 
 export default function LibraryView() {
-    const { projects, addProject, tasks, updateTask } = useData();
+    const { projects, addProject, tasks, updateTask, addTask } = useData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState(null); // For viewing project details
     const [viewingTask, setViewingTask] = useState(null); // For canvas view
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectColor, setNewProjectColor] = useState('#3b82f6');
+    const [quickTaskTitle, setQuickTaskTitle] = useState('');
 
     const handleCreate = () => {
         if (newProjectName.trim()) {
@@ -98,7 +99,12 @@ export default function LibraryView() {
             </Dialog>
 
             {/* Project Details Dialog */}
-            <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
+            <Dialog open={!!selectedProject} onOpenChange={(open) => {
+                if (!open) {
+                    setSelectedProject(null);
+                    setQuickTaskTitle('');
+                }
+            }}>
                 <DialogContent className="sm:max-w-[600px] bg-[#111] border-white/10 text-white">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
@@ -107,27 +113,88 @@ export default function LibraryView() {
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="py-4">
-                        <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Active Tasks</h4>
-                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                            {selectedProject && tasks.filter(t => t.projectId === selectedProject.id).length === 0 && (
-                                <p className="text-sm text-muted-foreground italic">No active tasks in this project.</p>
-                            )}
-                            {selectedProject && tasks.filter(t => t.projectId === selectedProject.id).map(task => (
-                                <div
-                                    key={task.id}
-                                    className="p-3 bg-white/5 rounded-lg border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/10"
-                                    onClick={() => setViewingTask(task)}
-                                >
-                                    <span className={task.status === 'done' ? "line-through text-muted-foreground" : ""}>{task.title}</span>
-                                    {task.scheduledStart && (
-                                        <span className="text-xs text-muted-foreground bg-white/5 px-2 py-1 rounded">
-                                            {new Date(task.scheduledStart).toLocaleDateString()}
-                                        </span>
-                                    )}
-                                </div>
-                            ))}
+                    <div className="py-4 space-y-6">
+                        {/* Quick Add */}
+                        <div className="flex gap-2">
+                            <input
+                                placeholder="Add to backlog..."
+                                className="flex-1 bg-white/5 border border-white/10 rounded-md p-2 focus:outline-none focus:border-neon-blue transition-colors text-sm"
+                                value={quickTaskTitle}
+                                onChange={(e) => setQuickTaskTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && quickTaskTitle.trim()) {
+                                        addTask(quickTaskTitle, selectedProject.id, 60, null, null, 'medium', 'medium', []);
+                                        setQuickTaskTitle('');
+                                    }
+                                }}
+                            />
+                            <Button size="sm" onClick={() => {
+                                if (quickTaskTitle.trim()) {
+                                    addTask(quickTaskTitle, selectedProject.id, 60, null, null, 'medium', 'medium', []);
+                                    setQuickTaskTitle('');
+                                }
+                            }} className="bg-white/5 hover:bg-white/10 text-white"><Plus className="w-4 h-4" /></Button>
                         </div>
+
+                        {/* Split Lists */}
+                        {(() => {
+                            if (!selectedProject) return null;
+                            const projectTasks = tasks.filter(t => t.projectId === selectedProject.id);
+                            const backlog = projectTasks.filter(t => !t.scheduledStart);
+                            const scheduled = projectTasks.filter(t => t.scheduledStart);
+
+                            return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[400px]">
+                                    {/* Backlog Column */}
+                                    <div className="flex flex-col">
+                                        <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center justify-between">
+                                            Backlog <span className="text-[10px] bg-white/10 px-1.5 rounded-full">{backlog.length}</span>
+                                        </h4>
+                                        <div className="flex-1 overflow-y-auto pr-2 space-y-2 bg-[#0c0c0c]/50 rounded-lg p-2 border border-white/5">
+                                            {backlog.length === 0 && <p className="text-xs text-muted-foreground italic text-center py-4">Empty backlog</p>}
+                                            {backlog.map(task => (
+                                                <div
+                                                    key={task.id}
+                                                    className="p-2 bg-white/5 rounded border border-white/5 cursor-pointer hover:bg-white/10 group flex items-start justify-between"
+                                                    onClick={() => setViewingTask(task)}
+                                                >
+                                                    <span className={`text-sm ${task.status === 'done' ? "line-through text-muted-foreground" : ""}`}>{task.title}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Scheduled Column */}
+                                    <div className="flex flex-col">
+                                        <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider flex items-center justify-between">
+                                            Scheduled <span className="text-[10px] bg-white/10 px-1.5 rounded-full">{scheduled.length}</span>
+                                        </h4>
+                                        <div className="flex-1 overflow-y-auto pr-2 space-y-2 bg-[#0c0c0c]/50 rounded-lg p-2 border border-white/5">
+                                            {scheduled.length === 0 && <p className="text-xs text-muted-foreground italic text-center py-4">No scheduled tasks</p>}
+                                            {scheduled.map(task => (
+                                                <div
+                                                    key={task.id}
+                                                    className="p-2 bg-white/5 rounded border border-white/5 cursor-pointer hover:bg-white/10 group"
+                                                    onClick={() => setViewingTask(task)}
+                                                >
+                                                    <div className={`text-sm ${task.status === 'done' ? "line-through text-muted-foreground" : ""}`}>{task.title}</div>
+                                                    <div className="mt-1 flex items-center gap-2">
+                                                        <span className="text-[10px] text-neon-blue bg-neon-blue/10 px-1.5 py-0.5 rounded">
+                                                            {new Date(task.scheduledStart).toLocaleDateString()}
+                                                        </span>
+                                                        {task.scheduledStart.includes('T') && (
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                {new Date(task.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })()}
                     </div>
 
                     <DialogFooter>

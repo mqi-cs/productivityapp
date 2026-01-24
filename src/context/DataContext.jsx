@@ -16,7 +16,18 @@ const INITIAL_PROJECTS = [
 
 // Initial State (Clean slate for user flow preservation, minimal examples)
 const INITIAL_TASKS = [
-    { id: 't1', title: 'Welcome to Zen Obsidian', duration: 60, projectId: 'p1', scheduledStart: new Date().toISOString(), recurrence: null, canvasData: { nodes: [], edges: [] } },
+    {
+        id: 't1',
+        title: 'Welcome to Zen Obsidian',
+        duration: 60,
+        projectId: 'p1',
+        scheduledStart: new Date().toISOString(),
+        recurrence: null,
+        urgency: 'medium',
+        importance: 'medium',
+        labels: [],
+        canvasData: { nodes: [], edges: [] }
+    },
 ];
 
 // Initial History (Completed Tasks: { 'YYYY-MM-DD': ['taskId1'] })
@@ -29,7 +40,7 @@ export function DataProvider({ children }) {
 
     // -- Actions --
 
-    const addTask = (title, projectId, duration = 60, scheduledStart = null, recurrence = null) => {
+    const addTask = (title, projectId, duration = 60, scheduledStart = null, recurrence = null, urgency = 'medium', importance = 'medium', labels = []) => {
         const newTask = {
             id: Math.random().toString(36).substr(2, 9),
             title,
@@ -37,7 +48,11 @@ export function DataProvider({ children }) {
             projectId: projectId || projects[0]?.id, // Default to first project
             projectId: projectId || projects[0]?.id, // Default to first project
             scheduledStart: scheduledStart ? scheduledStart.toISOString() : null,
+            scheduledStart: scheduledStart ? scheduledStart.toISOString() : null,
             recurrence,
+            urgency,
+            importance,
+            labels,
             canvasData: { nodes: [], edges: [] }
         };
         setTasks(prev => [...prev, newTask]);
