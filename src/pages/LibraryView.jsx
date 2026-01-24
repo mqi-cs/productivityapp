@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Plus, Tag, Trash2, FolderOpen } from 'lucide-react';
 // We reused the Dialog component
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import TaskCanvas from '@/components/ui/TaskCanvas';
 
 export default function LibraryView() {
-    const { projects, addProject, tasks } = useData();
+    const { projects, addProject, tasks, updateTask } = useData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [selectedProject, setSelectedProject] = useState(null); // For viewing project details
+    const [viewingTask, setViewingTask] = useState(null); // For canvas view
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectColor, setNewProjectColor] = useState('#3b82f6');
 
@@ -35,7 +38,11 @@ export default function LibraryView() {
                 {projects.map(project => {
                     const taskCount = tasks.filter(t => t.projectId === project.id).length;
                     return (
-                        <div key={project.id} className="p-6 rounded-xl border border-white/10 bg-[#111] hover:border-white/20 transition-all group">
+                        <div
+                            key={project.id}
+                            onClick={() => setSelectedProject(project)}
+                            className="p-6 rounded-xl border border-white/10 bg-[#111] hover:border-white/20 transition-all group cursor-pointer hover:bg-white/[0.02]"
+                        >
                             <div className="flex items-center justify-between mb-4">
                                 <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${project.color}20` }}>
                                     <FolderOpen className="w-5 h-5" style={{ color: project.color }} />
@@ -89,6 +96,54 @@ export default function LibraryView() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Project Details Dialog */}
+            <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
+                <DialogContent className="sm:max-w-[600px] bg-[#111] border-white/10 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full" style={{ background: selectedProject?.color }} />
+                            {selectedProject?.name}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="py-4">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Active Tasks</h4>
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                            {selectedProject && tasks.filter(t => t.projectId === selectedProject.id).length === 0 && (
+                                <p className="text-sm text-muted-foreground italic">No active tasks in this project.</p>
+                            )}
+                            {selectedProject && tasks.filter(t => t.projectId === selectedProject.id).map(task => (
+                                <div
+                                    key={task.id}
+                                    className="p-3 bg-white/5 rounded-lg border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/10"
+                                    onClick={() => setViewingTask(task)}
+                                >
+                                    <span className={task.status === 'done' ? "line-through text-muted-foreground" : ""}>{task.title}</span>
+                                    {task.scheduledStart && (
+                                        <span className="text-xs text-muted-foreground bg-white/5 px-2 py-1 rounded">
+                                            {new Date(task.scheduledStart).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setSelectedProject(null)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Task Canvas Overlay */}
+            {viewingTask && (
+                <TaskCanvas
+                    task={viewingTask}
+                    onClose={() => setViewingTask(null)}
+                    onSave={(updatedTask) => updateTask(updatedTask.id, updatedTask)}
+                />
+            )}
         </div>
     );
 }

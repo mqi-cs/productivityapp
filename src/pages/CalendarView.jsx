@@ -24,6 +24,7 @@ export default function CalendarView() {
     const [selection, setSelection] = useState(null); // { start: Date, end: Date }
     const [showCreationDialog, setShowCreationDialog] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [isRecurring, setIsRecurring] = useState(false); // New State
 
     const sensors = useSensors(useSensor(PointerSensor, {
@@ -100,6 +101,7 @@ export default function CalendarView() {
 
         setIsSelecting(true);
         setSelection({ start, end: new Date(start.getTime() + 60 * 60 * 1000) }); // Default 1h
+        setSelectedProjectId(projects[0]?.id); // Default to first project
     };
 
     const handleMouseMove = (e) => { /* ... Unused but keep for safety if needed later ... */ };
@@ -136,8 +138,8 @@ export default function CalendarView() {
         if (!newTaskTitle.trim() || !selection) return;
 
         const duration = (selection.end - selection.start) / (1000 * 60);
-        // Pass recurrence 'daily' if checked. Use first project as default.
-        addTask(newTaskTitle, projects[0]?.id, duration, selection.start, isRecurring ? 'daily' : null);
+        // Pass recurrence 'daily' if checked. Use selected project.
+        addTask(newTaskTitle, selectedProjectId, duration, selection.start, isRecurring ? 'daily' : null);
 
         cancelCreation();
     };
@@ -344,6 +346,29 @@ export default function CalendarView() {
                                     Daily Ritual
                                 </label>
                             </div>
+
+                            {/* Project Selection */}
+                            <div className="flex flex-wrap gap-2">
+                                {projects.map(p => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => setSelectedProjectId(p.id)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                                            selectedProjectId === p.id
+                                                ? "bg-white/10 border-white/30 text-white"
+                                                : "bg-[#0c0c0c] border-white/5 text-muted-foreground hover:border-white/20 hover:text-white"
+                                        )}
+                                        style={{
+                                            boxShadow: selectedProjectId === p.id ? `0 0 10px ${p.color}20` : 'none',
+                                            borderColor: selectedProjectId === p.id ? p.color : undefined
+                                        }}
+                                    >
+                                        <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+                                        {p.name}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <DialogFooter>
                             <Button variant="ghost" onClick={() => setShowCreationDialog(false)}>Cancel</Button>
@@ -389,7 +414,7 @@ export default function CalendarView() {
                     </DialogContent>
                 </Dialog>
             </div>
-        </DndContext>
+        </DndContext >
     );
 }
 
