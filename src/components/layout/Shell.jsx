@@ -1,11 +1,14 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Globe, Book } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Globe, Book, LogIn, LogOut } from 'lucide-react';
+import { useData } from '../../context/DataContext';
+import { supabase } from '../../supabaseClient';
 import { cn } from '@/lib/utils';
 import AnimatedBackground from './AnimatedBackground';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Shell() {
+    const { user } = useData();
     const location = useLocation();
     const isHome = location.pathname === '/';
 
@@ -67,6 +70,23 @@ export default function Shell() {
                         </NavLink>
                     ))}
                 </nav>
+
+                <div className="mt-auto mb-4 w-full px-2 flex flex-col gap-2">
+                    <button
+                        onClick={async () => {
+                            if (user) {
+                                await supabase.auth.signOut();
+                            } else {
+                                // Navigate to auth
+                                window.location.href = '/auth';
+                            }
+                        }}
+                        className="w-full aspect-square flex items-center justify-center rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 transition-all duration-200"
+                        title={user ? "Sign Out" : "Sign In"}
+                    >
+                        {user ? <LogOut className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+                    </button>
+                </div>
             </aside>
 
             {/* Main Content - Animate Presence for transitions */}

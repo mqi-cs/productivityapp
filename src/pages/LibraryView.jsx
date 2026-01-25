@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import TaskCanvas from '@/components/ui/TaskCanvas';
 
 export default function LibraryView() {
-    const { projects, addProject, tasks, updateTask, addTask } = useData();
+    const { projects, addProject, deleteProject, tasks, updateTask, addTask } = useData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState(null); // For viewing project details
     const [viewingTask, setViewingTask] = useState(null); // For canvas view
@@ -48,7 +48,18 @@ export default function LibraryView() {
                                 <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${project.color}20` }}>
                                     <FolderOpen className="w-5 h-5" style={{ color: project.color }} />
                                 </div>
-                                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm(`Are you sure you want to delete "${project.name}"?`)) {
+                                            deleteProject(project.id);
+                                            if (selectedProject?.id === project.id) setSelectedProject(null);
+                                        }
+                                    }}
+                                >
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                             </div>

@@ -5,11 +5,13 @@ import Home from './pages/Home';
 import CalendarView from './pages/CalendarView';
 import LibraryView from './pages/LibraryView';
 import MacroView from './pages/MacroView';
+import Auth from './pages/Auth';
 import { DataProvider } from './context/DataContext';
 
 function AppContent() {
   return (
     <Routes>
+      <Route path="/auth" element={<Auth />} />
       <Route path="/" element={<Shell />}>
         <Route index element={<Home />} />
         <Route path="dashboard" element={<CalendarView />} />

@@ -7,6 +7,7 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import IntegrationsDialog from '@/components/ui/IntegrationsDialog';
 
 // CONFIG
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 5); // 5 AM to 10 PM
@@ -24,7 +25,10 @@ export default function CalendarView() {
     const [isSelecting, setIsSelecting] = useState(false);
     const [selection, setSelection] = useState(null); // { start: Date, end: Date }
     const [showCreationDialog, setShowCreationDialog] = useState(false);
+    const [showIntegrations, setShowIntegrations] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [newDescription, setNewDescription] = useState('');
+    const [newLocation, setNewLocation] = useState('');
     const [selectedProjectId, setSelectedProjectId] = useState(null);
 
     const [isRecurring, setIsRecurring] = useState(false);
@@ -146,6 +150,8 @@ export default function CalendarView() {
         setNewUrgency('medium');
         setNewImportance('medium');
         setNewLabels('');
+        setNewDescription('');
+        setNewLocation('');
     }
 
     const handleCreateTask = () => {
@@ -156,7 +162,7 @@ export default function CalendarView() {
         const start = selection ? selection.start : null;
 
         const labelsArray = newLabels.split(',').map(l => l.trim()).filter(Boolean);
-        addTask(newTaskTitle, selectedProjectId, duration, start, isRecurring ? 'daily' : null, newUrgency, newImportance, labelsArray);
+        addTask(newTaskTitle, selectedProjectId, duration, start, isRecurring ? 'daily' : null, newUrgency, newImportance, labelsArray, newDescription, newLocation);
 
         cancelCreation();
     };
@@ -171,7 +177,11 @@ export default function CalendarView() {
 
     const handleSaveEdit = () => {
         if (editingTask && editingTask.title.trim()) {
-            updateTask(editingTask.id, { title: editingTask.title });
+            updateTask(editingTask.id, {
+                title: editingTask.title,
+                description: editingTask.description,
+                location: editingTask.location
+            });
             setEditingTask(null);
         }
     };
@@ -317,6 +327,16 @@ export default function CalendarView() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
+                            {/* Integrations */}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowIntegrations(true)}
+                                className="text-muted-foreground hover:text-white gap-2"
+                            >
+                                <Plus className="w-4 h-4" /> Add Calendar
+                            </Button>
+
                             {/* Filter Toggle */}
                             <Button
                                 variant="ghost"
@@ -434,6 +454,23 @@ export default function CalendarView() {
                                 onChange={(e) => setNewTaskTitle(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreateTask()}
                             />
+
+                            {/* NEW: Description and Location Inputs */}
+                            <div className="grid gap-2">
+                                <input
+                                    placeholder="Add location"
+                                    className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-neon-blue transition-colors"
+                                    value={newLocation}
+                                    onChange={(e) => setNewLocation(e.target.value)}
+                                />
+                                <textarea
+                                    placeholder="Add description"
+                                    className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-neon-blue transition-colors resize-none h-20"
+                                    value={newDescription}
+                                    onChange={(e) => setNewDescription(e.target.value)}
+                                />
+                            </div>
+
                             <div className="flex items-center justify-between">
                                 <div className="flex gap-2 text-sm text-muted-foreground">
                                     <div className="bg-white/5 px-2 py-1 rounded">
@@ -515,6 +552,8 @@ export default function CalendarView() {
                     </DialogContent>
                 </Dialog>
 
+                <IntegrationsDialog open={showIntegrations} onOpenChange={setShowIntegrations} />
+
                 {/* Edit Dialog */}
                 <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
                     <DialogContent className="sm:max-w-[425px] bg-[#111] border-white/10 text-white">
@@ -523,39 +562,80 @@ export default function CalendarView() {
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             <input
-                                className="w-full bg-white/5 border border-white/10 rounded-md p-3 text-lg focus:outline-none focus:border-neon-blue transition-colors"
+                                className="w-full bg-white/5 border border-white/10 rounded-md p-3 text-lg focus:outline-none focus:border-neon-blue transition-colors disabled:opacity-50"
                                 value={editingTask?.title || ''}
                                 onChange={(e) => setEditingTask(prev => ({ ...prev, title: e.target.value }))}
+                                disabled={editingTask?.readOnly}
                             />
+
+                            {/* NEW: Description and Location Display/Edit */}
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Location</label>
+                                    {editingTask?.readOnly ? (
+                                        <div className="text-sm text-white/80">{editingTask?.location || 'No location'}</div>
+                                    ) : (
+                                        <input
+                                            className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm focus:outline-none focus:border-neon-blue"
+                                            value={editingTask?.location || ''}
+                                            onChange={(e) => setEditingTask(prev => ({ ...prev, location: e.target.value }))}
+                                            placeholder="Add location"
+                                        />
+                                    )}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Description</label>
+                                    {editingTask?.readOnly ? (
+                                        <div className="text-sm text-white/80 whitespace-pre-wrap max-h-[150px] overflow-y-auto custom-scrollbar p-2 bg-white/5 rounded">
+                                            {editingTask?.description || 'No description'}
+                                        </div>
+                                    ) : (
+                                        <textarea
+                                            className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm focus:outline-none focus:border-neon-blue resize-none h-20"
+                                            value={editingTask?.description || ''}
+                                            onChange={(e) => setEditingTask(prev => ({ ...prev, description: e.target.value }))}
+                                            placeholder="Add description"
+                                        />
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {editingTask?.readOnly && <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded text-xs">External Event</span>}
                                 {editingTask?.recurrence === 'daily' && <span className="text-neon-cyan flex items-center gap-1">↻ Daily Ritual</span>}
                                 {editingTask?.status === 'done' && <span className="text-neon-green flex items-center gap-1">✓ Completed</span>}
                             </div>
                         </div>
                         <DialogFooter className="gap-2 sm:gap-0">
-                            <div className="flex gap-2 mr-auto">
-                                <Button variant="destructive" onClick={handleDeleteTask} className="bg-red-500/10 text-red-500 hover:bg-red-500/20">Remove</Button>
-                                <Button
-                                    onClick={handleCompleteTask}
-                                    className={cn(
-                                        "bg-white/5 hover:bg-white/10",
-                                        editingTask?.status === 'done' ? "text-neon-green" : "text-white"
-                                    )}
-                                >
-                                    {editingTask?.status === 'done' ? "Mark Undone" : "Mark Done"}
-                                </Button>
-                            </div>
+                            {!editingTask?.readOnly && (
+                                <div className="flex gap-2 mr-auto">
+                                    <Button variant="destructive" onClick={handleDeleteTask} className="bg-red-500/10 text-red-500 hover:bg-red-500/20">Remove</Button>
+                                    <Button
+                                        onClick={handleCompleteTask}
+                                        className={cn(
+                                            "bg-white/5 hover:bg-white/10",
+                                            editingTask?.status === 'done' ? "text-neon-green" : "text-white"
+                                        )}
+                                    >
+                                        {editingTask?.status === 'done' ? "Mark Undone" : "Mark Done"}
+                                    </Button>
+                                </div>
+                            )}
 
                             {/* Allow Editing Labels/Urgency in Edit Mode (Compact) */}
                             {/* Simplification: Just showing details for now, full edit could be added here */}
-                            <div className="flex gap-4 text-xs text-muted-foreground mt-2">
-                                <div>Urgency: <span className="text-white capitalize">{editingTask?.urgency || 'medium'}</span></div>
-                                <div>Importance: <span className="text-white capitalize">{editingTask?.importance || 'medium'}</span></div>
-                                <div>Labels: <span className="text-white">{editingTask?.labels?.join(', ') || '-'}</span></div>
+                            <div className="flex gap-4 text-xs text-muted-foreground mt-2 ml-auto sm:ml-0">
+                                {!editingTask?.readOnly && (
+                                    <>
+                                        <div>Urgency: <span className="text-white capitalize">{editingTask?.urgency || 'medium'}</span></div>
+                                        <div>Importance: <span className="text-white capitalize">{editingTask?.importance || 'medium'}</span></div>
+                                        <div>Labels: <span className="text-white">{editingTask?.labels?.join(', ') || '-'}</span></div>
+                                    </>
+                                )}
                             </div>
 
-                            <Button variant="ghost" onClick={() => setEditingTask(null)}>Cancel</Button>
-                            <Button onClick={handleSaveEdit} className="bg-neon-blue hover:bg-neon-blue/80 text-white">Save</Button>
+                            <Button variant="ghost" onClick={() => setEditingTask(null)}>Close</Button>
+                            {!editingTask?.readOnly && <Button onClick={handleSaveEdit} className="bg-neon-blue hover:bg-neon-blue/80 text-white">Save</Button>}
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -612,14 +692,15 @@ function MonthGrid({ currentDate, onTaskClick, meetsFilters }) {
                             </div>
                             {tasks.slice(0, 4).map(task => {
                                 const project = projects.find(p => p.id === task.projectId);
+                                const color = project?.color || task.sourceColor || '#888888';
                                 return (
                                     <div
                                         key={task.id}
                                         className={cn("text-[10px] truncate px-1.5 py-0.5 rounded border border-white/5 flex items-center gap-1 cursor-pointer", task.status === 'done' ? "opacity-50 line-through grayscale" : "")}
-                                        style={{ backgroundColor: `${project?.color}15`, borderColor: `${project?.color}30` }}
+                                        style={{ backgroundColor: `${color}15`, borderColor: `${color}30` }}
                                         onClick={() => onTaskClick(task)}
                                     >
-                                        <div className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: project?.color }} />
+                                        <div className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: color }} />
                                         <span className="truncate opacity-80">{task.title}</span>
                                     </div>
                                 )
@@ -726,7 +807,10 @@ function DayColumn({ date, dayName, onMouseDown, onMouseEnterSlot, selection, on
                     const startHour = new Date(task.scheduledStart).getHours();
                     const top = (startHour - HOURS[0]) * CELL_HEIGHT;
                     const height = (task.duration / 60) * CELL_HEIGHT;
+
                     const project = projects.find(p => p.id === task.projectId);
+                    const color = project?.color || task.sourceColor || '#888888'; // Fallback to gray
+
                     const isDone = task.status === 'done';
                     const importanceStyle = task.importance === 'high' ? '3px solid #00f0ff' : task.importance === 'low' ? '1px dotted rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.05)';
 
@@ -743,8 +827,8 @@ function DayColumn({ date, dayName, onMouseDown, onMouseEnterSlot, selection, on
                             style={{
                                 top: `${top}px`,
                                 height: `${height - 2}px`,
-                                backgroundColor: `${project?.color}15`,
-                                borderLeft: `3px solid ${project?.color}`,
+                                backgroundColor: `${color}15`,
+                                borderLeft: `3px solid ${color}`,
                                 borderTop: importanceStyle,
                                 borderRight: importanceStyle,
                                 borderBottom: importanceStyle,
