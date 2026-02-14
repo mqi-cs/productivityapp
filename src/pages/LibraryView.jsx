@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Tag, Trash2, FolderOpen } from 'lucide-react';
 // We reused the Dialog component
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import TaskMenu from '@/components/ui/TaskMenu';
 import TaskCanvas from '@/components/ui/TaskCanvas';
 
 export default function LibraryView() {
@@ -14,6 +15,28 @@ export default function LibraryView() {
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectColor, setNewProjectColor] = useState('#3b82f6');
     const [quickTaskTitle, setQuickTaskTitle] = useState('');
+
+    const handleMoveTask = async (task, direction, currentList) => {
+        const index = currentList.findIndex(t => t.id === task.id);
+        if (index === -1) return;
+
+        const otherIndex = direction === 'up' ? index - 1 : index + 1;
+        if (otherIndex < 0 || otherIndex >= currentList.length) return;
+
+        const otherTask = currentList[otherIndex];
+
+        // Swap positions
+        // We use index-based priority if position is missing
+        const pos1 = task.canvasData?.position ?? index * 1000;
+        const pos2 = otherTask.canvasData?.position ?? otherIndex * 1000;
+
+        // Effective Swap: We give task the otherTask's position and vice versa
+        // But to avoid collisions if they were generated, let's just re-normalize the whole list or swap strictly
+        // Simple swap:
+        await updateTask(task.id, { canvasData: { ...task.canvasData, position: pos2 } });
+        await updateTask(otherTask.id, { canvasData: { ...otherTask.canvasData, position: pos1 } });
+    };
+
 
     const handleCreate = () => {
         if (newProjectName.trim()) {
@@ -163,15 +186,33 @@ export default function LibraryView() {
                                         </h4>
                                         <div className="flex-1 overflow-y-auto pr-2 space-y-2 bg-[#0c0c0c]/50 rounded-lg p-2 border border-white/5">
                                             {backlog.length === 0 && <p className="text-xs text-muted-foreground italic text-center py-4">Empty backlog</p>}
-                                            {backlog.map(task => (
-                                                <div
-                                                    key={task.id}
-                                                    className="p-2 bg-white/5 rounded border border-white/5 cursor-pointer hover:bg-white/10 group flex items-start justify-between"
-                                                    onClick={() => setViewingTask(task)}
-                                                >
-                                                    <span className={`text-sm ${task.status === 'done' ? "line-through text-muted-foreground" : ""}`}>{task.title}</span>
-                                                </div>
-                                            ))}
+                                            {backlog.length === 0 && <p className="text-xs text-muted-foreground italic text-center py-4">Empty backlog</p>}
+                                            {(() => {
+                                                // Sort backlog by position
+                                                const sortedBacklog = [...backlog].sort((a, b) => (a.canvasData?.position || 0) - (b.canvasData?.position || 0));
+
+                                                return sortedBacklog.map(task => (
+                                                    <div
+                                                        key={task.id}
+                                                        className={`p-2 bg-white/5 rounded border cursor-pointer hover:bg-white/10 group flex items-center justify-between gap-2 ${task.canvasData?.customStatus ? '' : 'border-white/5'}`}
+                                                        style={task.canvasData?.customStatus ? { borderColor: task.canvasData.customStatus, borderLeftWidth: '3px' } : {}}
+                                                        onClick={() => setViewingTask(task)}
+                                                    >
+                                                        <span className={`text-sm truncate flex-1 ${task.status === 'done' ? "line-through text-muted-foreground" : ""}`}>{task.title}</span>
+
+                                                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                                                            <TaskMenu
+                                                                task={task}
+                                                                projects={projects}
+                                                                onMoveUp={() => handleMoveTask(task, 'up', sortedBacklog)}
+                                                                onMoveDown={() => handleMoveTask(task, 'down', sortedBacklog)}
+                                                                onMoveProject={(newProjectId) => updateTask(task.id, { projectId: newProjectId })}
+                                                                onSetStatus={(status) => updateTask(task.id, { canvasData: { ...task.canvasData, customStatus: status } })}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            })()}
                                         </div>
                                     </div>
 

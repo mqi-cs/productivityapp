@@ -19,6 +19,7 @@ export function DataProvider({ children }) {
     const [tasks, setTasks] = useState([]);
     const [projects, setProjects] = useState([]);
     const [history, setHistory] = useState({});
+    const [dailyLogs, setDailyLogs] = useState({});
     const [loading, setLoading] = useState(true);
     const [externalEvents, setExternalEvents] = useState([]);
 
@@ -99,6 +100,24 @@ export function DataProvider({ children }) {
                 historyMap[date].push(h.task_id);
             });
             setHistory(historyMap);
+
+            // Daily Logs
+            const { data: logsData, error: logsError } = await supabase
+                .from('daily_logs')
+                .select('*');
+
+            if (!logsError && logsData) {
+                const logsMap = {};
+                logsData.forEach(log => {
+                    logsMap[log.date] = log.blocks || [];
+                });
+                setDailyLogs(logsMap);
+            } else if (logsError) {
+                console.warn("Could not fetch daily_logs. Ensure table exists.", logsError);
+                setDailyLogs({});
+            } else {
+                setDailyLogs({});
+            }
 
             // Fetch External Calendars
             fetchExternalCalendars(userId);
@@ -394,6 +413,30 @@ export function DataProvider({ children }) {
         }
     };
 
+    // -- Daily Logs --
+    const saveDailyLog = async (dateStr, blocks) => {
+        if (!user) return;
+
+        // Optimistic Update
+        setDailyLogs(prev => ({
+            ...prev,
+            [dateStr]: blocks
+        }));
+
+        // DB Update (Upsert)
+        const { error } = await supabase
+            .from('daily_logs')
+            .upsert({
+                user_id: user.id,
+                date: dateStr,
+                blocks: blocks
+            }, { onConflict: 'user_id, date' });
+
+        if (error) {
+            console.error("Error saving daily log:", error);
+        }
+    };
+
     // -- Queries --
 
     const isTaskCompleted = (taskId, dateStr) => {
@@ -460,8 +503,8 @@ export function DataProvider({ children }) {
         <DataContext.Provider value={{
             user,
             loading,
-            tasks, projects, history,
-            addTask, updateTask, addProject, deleteProject, scheduleTask, unscheduleTask, toggleTaskStatus,
+            tasks, projects, history, dailyLogs,
+            addTask, updateTask, addProject, deleteProject, scheduleTask, unscheduleTask, toggleTaskStatus, saveDailyLog,
             inboxTasks, overdueTasks, dueTodayTasks, getTasksByDate, isTaskCompleted
         }}>
             {children}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Globe, Book, LogIn, LogOut } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Globe, Book, LogIn, LogOut, Clock } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { supabase } from '../../supabaseClient';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,8 @@ export default function Shell() {
     const navItems = [
         { path: "/dashboard", icon: LayoutDashboard, label: "Flow" },
         { path: "/library", icon: Book, label: "Projects" },
-        { path: "/macro", icon: BarChart3, label: "Macro" },
+        { path: "/daily", icon: Clock, label: "Daily Log" },
+        { path: "/personal", icon: Globe, label: "Personal" },
     ];
 
     return (

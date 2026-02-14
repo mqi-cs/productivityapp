@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Book, Activity, ArrowRight } from 'lucide-react';
+import { Calendar, Book, Clock, ArrowRight, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Home() {
@@ -25,7 +25,7 @@ export default function Home() {
                     </p>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-2xl text-left">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl text-left">
                     <PortalCard
                         title="Flow"
                         subtitle="Calendar & Tasks"
@@ -35,12 +35,12 @@ export default function Home() {
                         onClick={() => navigate('/dashboard')}
                     />
                     <PortalCard
-                        title="Macro Map"
-                        subtitle="History & Analytics"
-                        icon={Activity}
+                        title="Daily Log"
+                        subtitle="Time Tracking"
+                        icon={Clock}
                         className="hover:border-neon-purple/50"
                         glowColor="rgba(189, 0, 255, 0.4)"
-                        onClick={() => navigate('/macro')}
+                        onClick={() => navigate('/daily')}
                     />
                     <PortalCard
                         title="Projects"
@@ -49,6 +49,14 @@ export default function Home() {
                         className="hover:border-neon-pink/50"
                         glowColor="rgba(255, 0, 212, 0.4)"
                         onClick={() => navigate('/library')}
+                    />
+                    <PortalCard
+                        title="Personal Space"
+                        subtitle="To-Do, Storage, Quotes"
+                        icon={Globe}
+                        className="hover:border-neon-blue/50"
+                        glowColor="rgba(0, 210, 255, 0.4)"
+                        onClick={() => navigate('/personal')}
                     />
                 </div>
 

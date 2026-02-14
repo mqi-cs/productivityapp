@@ -4,7 +4,8 @@ import Shell from './components/layout/Shell';
 import Home from './pages/Home';
 import CalendarView from './pages/CalendarView';
 import LibraryView from './pages/LibraryView';
-import MacroView from './pages/MacroView';
+import DailyLogView from './pages/DailyLogView';
+import PersonalView from './pages/PersonalView';
 import Auth from './pages/Auth';
 import { DataProvider } from './context/DataContext';
 
@@ -16,7 +17,8 @@ function AppContent() {
         <Route index element={<Home />} />
         <Route path="dashboard" element={<CalendarView />} />
         <Route path="library" element={<LibraryView />} />
-        <Route path="macro" element={<MacroView />} />
+        <Route path="daily" element={<DailyLogView />} />
+        <Route path="personal" element={<PersonalView />} />
       </Route>
     </Routes>
   );
